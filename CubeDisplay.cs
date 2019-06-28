@@ -11,7 +11,7 @@ public class CubeDisplay : MonoBehaviour
     public GameObject[] centers, edges, corners;
     Cubie[] centerPointers, edgePointers, cornerPointers;
     public float rotationSpeed = 10;
-    bool rotating;
+    public bool rotating;
 
     void Awake ()
     {
@@ -27,6 +27,7 @@ public class CubeDisplay : MonoBehaviour
 
         cube.newCubeGenerated += SetWorldCubes;
         cube.rotationMade += RotateSide;
+        cube.rotationMade_Layer += RotateLayer;
     }
 
     void Update ()
@@ -74,6 +75,27 @@ public class CubeDisplay : MonoBehaviour
                     cube.RotateSide(SidesOfCube.left, true);
                 else
                     cube.RotateSide(SidesOfCube.left, false);
+            }
+            else if (Input.GetKeyDown(KeyCode.Z))
+            {
+                if (Input.GetKey(KeyCode.LeftShift))
+                    cube.RotateMidLayer(MidLayersOfCube.Middle, true);
+                else
+                    cube.RotateMidLayer(MidLayersOfCube.Middle, false);
+            }
+            else if (Input.GetKeyDown(KeyCode.X))
+            {
+                if (Input.GetKey(KeyCode.LeftShift))
+                    cube.RotateMidLayer(MidLayersOfCube.Equatorial, true);
+                else
+                    cube.RotateMidLayer(MidLayersOfCube.Equatorial, false);
+            }
+            else if (Input.GetKeyDown(KeyCode.C))
+            {
+                if (Input.GetKey(KeyCode.LeftShift))
+                    cube.RotateMidLayer(MidLayersOfCube.Standing, true);
+                else
+                    cube.RotateMidLayer(MidLayersOfCube.Standing, false);
             }
         }
     }
@@ -155,37 +177,106 @@ public class CubeDisplay : MonoBehaviour
         }
 
         //rotate them all around the axis in the correct direction
+        Vector3 axis = GetDirFromSide(side);
         float rotationTotal = 0;
         while (rotationTotal < 90)
         {
-            float rotationAmount = Mathf.Clamp(rotationSpeed * Time.deltaTime, 0, 90 - rotationTotal);
-            rotationTotal += rotationAmount;
-            if (prime)
-                rotationAmount *= -1;
-            for (int i = 0; i < cubiesToRotate.Count; i++)
-            {
-                cubiesToRotate[i].transform.RotateAround(Vector3.zero, GetDirFromSide(side), rotationAmount);
-            }
+            RotateWorldCubies(cubiesToRotate, ref rotationTotal, axis, prime);
             yield return null;
         }
 
         //once the rotation is finished, round their positions and rotations to the nearest integer,
         //just in case they're slightly off
-        for (int i = 0; i < cubiesToRotate.Count; i++)
+        RoundWorldCubiePositions(cubiesToRotate);
+        rotating = false;
+    }
+    void RotateLayer (MidLayersOfCube layer, bool prime)
+    {
+        StartCoroutine(RotateLayerCo(layer, prime));
+    }
+    IEnumerator RotateLayerCo (MidLayersOfCube layer, bool prime)
+    {
+        rotating = true;
+        //find the cubies that are on the layer being rotated
+        List<GameObject> cubiesToRotate = new List<GameObject>();
+        for (int i = 0; i < 6; i++)
         {
-            Vector3 pos = cubiesToRotate[i].transform.position;
+            switch (layer)
+            {
+                case MidLayersOfCube.Middle:
+                    if (centers[i].transform.position.x == 0)
+                        cubiesToRotate.Add(centers[i]);
+                    break;
+                case MidLayersOfCube.Equatorial:
+                    if (centers[i].transform.position.y == 0)
+                        cubiesToRotate.Add(centers[i]);
+                    break;
+                case MidLayersOfCube.Standing:
+                    if (centers[i].transform.position.z == 0)
+                        cubiesToRotate.Add(centers[i]);
+                    break;
+            }
+        }
+        for (int i = 0; i < 12; i++)
+        {
+            switch (layer)
+            {
+                case MidLayersOfCube.Middle:
+                    if (edges[i].transform.position.x == 0)
+                        cubiesToRotate.Add(edges[i]);
+                    break;
+                case MidLayersOfCube.Equatorial:
+                    if (edges[i].transform.position.y == 0)
+                        cubiesToRotate.Add(edges[i]);
+                    break;
+                case MidLayersOfCube.Standing:
+                    if (edges[i].transform.position.z == 0)
+                        cubiesToRotate.Add(edges[i]);
+                    break;
+            }
+        }
+
+        //rotate them all around the axis in the correct direction
+        Vector3 axis = GetDirFromLayer(layer);
+        float rotationTotal = 0;
+        while (rotationTotal < 90)
+        {
+            RotateWorldCubies(cubiesToRotate, ref rotationTotal, axis, prime);
+            yield return null;
+        }
+
+        //once the rotation is finished, round their positions and rotations to the nearest integer,
+        //just in case they're slightly off
+        RoundWorldCubiePositions(cubiesToRotate);
+        rotating = false;
+    }
+    void RotateWorldCubies (List<GameObject> cubies, ref float rotationTotal, Vector3 axis, bool prime)
+    {
+        float rotationAmount = Mathf.Clamp(rotationSpeed * Time.deltaTime, 0, 90 - rotationTotal);
+        rotationTotal += rotationAmount;
+        if (prime)
+            rotationAmount *= -1;
+        for (int i = 0; i < cubies.Count; i++)
+        {
+            cubies[i].transform.RotateAround(Vector3.zero, axis, rotationAmount);
+        }
+    }
+    void RoundWorldCubiePositions (List<GameObject> worldCubies)
+    {
+        for (int i = 0; i < worldCubies.Count; i++)
+        {
+            Vector3 pos = worldCubies[i].transform.position;
             pos.x = Mathf.Round(pos.x);
             pos.y = Mathf.Round(pos.y);
             pos.z = Mathf.Round(pos.z);
-            cubiesToRotate[i].transform.position = pos;
+            worldCubies[i].transform.position = pos;
 
-            Vector3 rot = cubiesToRotate[i].transform.eulerAngles;
+            Vector3 rot = worldCubies[i].transform.eulerAngles;
             rot.x = Mathf.Round(rot.x);
             rot.y = Mathf.Round(rot.y);
             rot.z = Mathf.Round(rot.z);
-            cubiesToRotate[i].transform.eulerAngles = rot;
+            worldCubies[i].transform.eulerAngles = rot;
         }
-        rotating = false;
     }
 
     Vector3 GetDirFromSide (SidesOfCube side)
@@ -204,6 +295,18 @@ public class CubeDisplay : MonoBehaviour
                 return Vector3.forward;
             default:
                 return Vector3.back;
+        }
+    }
+    Vector3 GetDirFromLayer (MidLayersOfCube layer)
+    {
+        switch (layer)
+        {
+            case MidLayersOfCube.Middle:
+                return Vector3.left;
+            case MidLayersOfCube.Equatorial:
+                return Vector3.up;
+            default:
+                return Vector3.forward;
         }
     }
 

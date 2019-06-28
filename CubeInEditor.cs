@@ -10,7 +10,6 @@ public class CubeInEditor : Editor
     {
         DrawDefaultInspector();
         Cube cube = (Cube)target;
-        CubeDisplay disp = cube.gameObject.GetComponent<CubeDisplay>();
 
         if (GUILayout.Button("Generate Cube"))
         {

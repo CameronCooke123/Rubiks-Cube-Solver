@@ -47,6 +47,24 @@ public class Cubie
                 RotateCubieFB(tile, !prime);
         }
     }
+    public void RotateTiles (MidLayersOfCube layer, bool prime)
+    {
+        if (layer == MidLayersOfCube.Middle)
+        {
+            foreach (Tile tile in tiles)
+                RotateCubieRL(tile, prime);
+        }
+        else if (layer == MidLayersOfCube.Equatorial)
+        {
+            foreach (Tile tile in tiles)
+                RotateCubieUD(tile, prime);
+        }
+        else
+        {
+            foreach (Tile tile in tiles)
+                RotateCubieFB(tile, prime);
+        }
+    }
 
     void RotateCubieUD (Tile tile, bool prime)
     {
