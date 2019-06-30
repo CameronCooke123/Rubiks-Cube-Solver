@@ -14,6 +14,43 @@ public class Cubie
         tiles = tilesArr;
     }
 
+    public Tile GetTile (SidesOfCube side)
+    {
+        for (int i = 0; i < numTiles; i++)
+        {
+            if (tiles[i].sideOfCube == side)
+                return tiles[i];
+        }
+        return tiles[0];
+    }
+    public Tile GetTile (Colors color)
+    {
+        for (int i = 0; i < numTiles; i++)
+        {
+            if (tiles[i].color == color)
+                return tiles[i];
+        }
+        return tiles[0];
+    }
+    public int GetTileIndex (SidesOfCube side)
+    {
+        for (int i = 0; i < numTiles; i++)
+        {
+            if (tiles[i].sideOfCube == side)
+                return i;
+        }
+        return 0;
+    }
+    public int GetTileIndex (Colors color)
+    {
+        for (int i = 0; i < numTiles; i++)
+        {
+            if (tiles[i].color == color)
+                return i;
+        }
+        return 0;
+    }
+
     public void RotateTiles (SidesOfCube axis, bool prime)
     {
         if (axis == SidesOfCube.up)

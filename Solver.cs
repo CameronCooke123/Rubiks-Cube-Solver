@@ -105,10 +105,29 @@ public class Solver : MonoBehaviour
                 case "B'":
                     yield return StartCoroutine(Move(SidesOfCube.back, true));
                     break;
+                case "M":
+                    yield return StartCoroutine(Move(MidLayersOfCube.Middle, false));
+                    break;
+                case "M'":
+                    yield return StartCoroutine(Move(MidLayersOfCube.Middle, true));
+                    break;
+                case "E":
+                    yield return StartCoroutine(Move(MidLayersOfCube.Equatorial, false));
+                    break;
+                case "E'":
+                    yield return StartCoroutine(Move(MidLayersOfCube.Equatorial, true));
+                    break;
+                case "S":
+                    yield return StartCoroutine(Move(MidLayersOfCube.Standing, false));
+                    break;
+                case "S'":
+                    yield return StartCoroutine(Move(MidLayersOfCube.Standing, true));
+                    break;
             }
         }
     }
 
+    //todo: implement Cubie.GetTile() and Cubie.GetTileIndex() everywhere it belongs.
     IEnumerator Cross ()
     {
         solving = true;
@@ -330,7 +349,6 @@ public class Solver : MonoBehaviour
             }
         }
 
-        Debug.Break();
         //EDGES
         //find all non-white, non-yellow edges
         Cubie[] nonWYEdges = new Cubie[4];
@@ -415,12 +433,353 @@ public class Solver : MonoBehaviour
     }
     IEnumerator OrientLastLayer ()
     {
-        yield return null;
+        //EDGES
+        //find out which yellow edges are facing up
+        List<int> yelTilesUpIndexes = new List<int>();
+        for (int i = 0; i < 4; i++)
+        {
+            int yellowIndex = (cube.edgePieces[i].tiles[0].color == Colors.yellow) ? 0 : 1;
+            if (cube.edgePieces[i].tiles[yellowIndex].sideOfCube == SidesOfCube.up)
+            {
+                yelTilesUpIndexes.Add(i);//indexes are added to the list in clockwise order, starting from the front side (see key)
+            }
+        }
+
+        //get top cross
+        if (yelTilesUpIndexes.Count == 0)
+        {
+            yield return StartCoroutine(Algorithm("F R U R' U' S R U R' U' F' S'"));
+        }
+        else if (yelTilesUpIndexes.Count == 2)
+        {
+            //LINE
+            if (yelTilesUpIndexes[0] % 2 == yelTilesUpIndexes[1] % 2)
+            {
+                //align pieces
+                if (yelTilesUpIndexes[0] != 1 && yelTilesUpIndexes[0] != 3)
+                    yield return StartCoroutine(Move(SidesOfCube.up, true));
+
+                //get top cross
+                yield return StartCoroutine(Algorithm("F R U R' U' F'"));
+            }
+            //L
+            else
+            {
+                //align pieces
+                while ((yelTilesUpIndexes[0] == 2 || yelTilesUpIndexes[0] == 1) ||
+                       (yelTilesUpIndexes[1] == 2 || yelTilesUpIndexes[1] == 1))
+                {
+                    if (yelTilesUpIndexes[0] < 2)
+                    {
+                        yield return StartCoroutine(Move(SidesOfCube.up, true));
+                        yelTilesUpIndexes[0] = (yelTilesUpIndexes[0] + 3) % 4;//this is kind of an obnoxious looking formula. It just means:
+                        yelTilesUpIndexes[1] = (yelTilesUpIndexes[1] + 3) % 4;//subtract 1. C# modulus is weird with negative numbers for some reason.
+                    }
+                    else
+                    {
+                        yield return StartCoroutine(Move(SidesOfCube.up, false));
+                        yelTilesUpIndexes[0] = (yelTilesUpIndexes[0] + 1) % 4;
+                        yelTilesUpIndexes[1] = (yelTilesUpIndexes[1] + 1) % 4;
+                    }
+                }
+
+                //get top cross
+                yield return StartCoroutine(Algorithm("F S R U R' U' F' S'"));
+            }
+        }
+
+        //CORNERS
+        //get the yellow tiles for each corner piece
+        Tile[] yellowTiles = new Tile[4];
+        List<int> facingUpIndexes = new List<int>();
+        List<Tile> notFacingUpYelTiles = new List<Tile>();
+        for (int i = 0; i < 4; i++)
+        {
+            yellowTiles[i] = cube.cornerPieces[i].GetTile(Colors.yellow);
+            if (yellowTiles[i].sideOfCube == SidesOfCube.up)
+            {
+                facingUpIndexes.Add(i);
+            }
+            else
+            {
+                notFacingUpYelTiles.Add(yellowTiles[i]);
+            }
+        }
+
+        //find case
+        if (facingUpIndexes.Count == 0)
+        {
+            //H
+            if ((yellowTiles[0].sideOfCube == yellowTiles[1].sideOfCube && yellowTiles[2].sideOfCube == yellowTiles[3].sideOfCube) ||
+                (yellowTiles[0].sideOfCube == yellowTiles[3].sideOfCube && yellowTiles[1].sideOfCube == yellowTiles[2].sideOfCube))
+            {
+                //align up side if necessary
+                if (yellowTiles[0].sideOfCube == SidesOfCube.left)
+                    yield return StartCoroutine(Move(SidesOfCube.up, false));
+
+                //perform algorithm
+                yield return StartCoroutine(Algorithm("F R U R' U' R U R' U' R U R' U' F'"));
+            }
+            //pi
+            else
+            {
+                //align up side
+                //find the 2 yellow tiles that are facing the same direction
+                for (int i = 0; i < 4; i++)
+                {
+                    if (yellowTiles[i].sideOfCube == yellowTiles[(i+1)%4].sideOfCube)
+                    {
+                        //once found, rotate the up side until they're on the left
+                        if (yellowTiles[i].sideOfCube == SidesOfCube.left)
+                            break;
+
+                        if (yellowTiles[i].sideOfCube == SidesOfCube.back)
+                            yield return StartCoroutine(Move(SidesOfCube.up, true));
+                        else
+                        {
+                            if (yellowTiles[i].sideOfCube == SidesOfCube.right)
+                                yield return StartCoroutine(Move(SidesOfCube.up, false));
+                            yield return StartCoroutine(Move(SidesOfCube.up, false));
+                        }
+                        break;
+                    }
+                }
+
+                //perform algorithm
+                yield return StartCoroutine(Algorithm("R U' U' R R U' R R U' R R U' U' R"));
+            }
+        }
+        else if (facingUpIndexes.Count == 1)
+        {
+            //find the tile that is facing up
+            int index = facingUpIndexes[0];
+            int nextTileIndex = (cube.cornerPieces[index].GetTileIndex(Colors.yellow) + 1) % 3;//the tile on corner i Going clockwise from the yellow
+            int prevCubieIndex = (index + 3) % 4;//the next corner piece going counterclockwise, subtract 1 without going negative
+            if (yellowTiles[prevCubieIndex].sideOfCube == cube.cornerPieces[index].tiles[nextTileIndex].sideOfCube)
+            {
+                //sune
+                //rotate top layer into position
+                if (index == 1)
+                    yield return StartCoroutine(Move(SidesOfCube.up, true));
+                else
+                {
+                    if (index == 2)
+                        yield return StartCoroutine(Move(SidesOfCube.up, false));
+                    if (index != 0)
+                        yield return StartCoroutine(Move(SidesOfCube.up, false));
+                }
+
+                //perform algorithm
+                yield return StartCoroutine(Algorithm("R U R' U R U U R'"));
+            }
+            else
+            {
+                //anti sune
+                //rotate top layer into position
+                if (index == 1)
+                    yield return StartCoroutine(Move(SidesOfCube.up, false));
+                else
+                {
+                    if (index == 0)
+                        yield return StartCoroutine(Move(SidesOfCube.up, true));
+                    if (index != 2)
+                        yield return StartCoroutine(Move(SidesOfCube.up, true));
+                }
+
+                //perform algorithm
+                yield return StartCoroutine(Algorithm("R U' U' R' U' R U' R'"));
+            }
+        }
+        else if (facingUpIndexes.Count == 2)
+        {
+            if (facingUpIndexes[1] - facingUpIndexes[0] == 2)
+            {
+                //bowtie
+                //rotate up side into position
+                if (facingUpIndexes[0] == 0)
+                {
+                    if (notFacingUpYelTiles[1].sideOfCube != SidesOfCube.front)
+                    {
+                        yield return StartCoroutine(Move(SidesOfCube.up, false));
+                        yield return StartCoroutine(Move(SidesOfCube.up, false));
+                    }
+                }
+                else
+                {
+                    if (notFacingUpYelTiles[0].sideOfCube == SidesOfCube.left)
+                        yield return StartCoroutine(Move(SidesOfCube.up, true));
+                    else
+                        yield return StartCoroutine(Move(SidesOfCube.up, false));
+                }
+
+                //perform algorithm
+                yield return StartCoroutine(Algorithm("F' R M U R' U' R' M' F R"));
+            }
+            else if (notFacingUpYelTiles[0].sideOfCube == notFacingUpYelTiles[1].sideOfCube)
+            {
+                //headlights
+                //rotate up side into position
+                if (notFacingUpYelTiles[0].sideOfCube == SidesOfCube.left)
+                    yield return StartCoroutine(Move(SidesOfCube.up, true));
+                else if (notFacingUpYelTiles[0].sideOfCube == SidesOfCube.back)
+                {
+                    yield return StartCoroutine(Move(SidesOfCube.up, false));
+                    yield return StartCoroutine(Move(SidesOfCube.up, false));
+                }
+                else if (notFacingUpYelTiles[0].sideOfCube == SidesOfCube.right)
+                    yield return StartCoroutine(Move(SidesOfCube.up, false));
+
+                //perform algorithm
+                yield return StartCoroutine(Algorithm("R R D R' U U R D' R' U U R'"));
+            }
+            else
+            {
+                //T
+                //rotate up side into position
+                if (facingUpIndexes[0] == 0)
+                {
+                    if (facingUpIndexes[1] == 1)
+                        yield return StartCoroutine(Move(SidesOfCube.up, true));
+                    yield return StartCoroutine(Move(SidesOfCube.up, true));
+                }
+                else if (facingUpIndexes[0] == 1)
+                {
+                    yield return StartCoroutine(Move(SidesOfCube.up, false));
+                }
+
+                //perform algorithm
+                yield return StartCoroutine(Algorithm("R M U R' U' R' M' F R F'"));
+            }
+        }
+
         currentStep = StartCoroutine(PermutateLastLayer());
     }
     IEnumerator PermutateLastLayer ()
     {
-        yield return null;
+        //CORNERS
+        //check for matching adjacent corner tiles
+        Tile lastMatch = null;
+        int matches = 0;
+        int cubieIndex = 0, nextCubieIndex = 0, cubieTileCheckIndex = 0, nextCubieTileCheckIndex = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            cubieIndex = i;
+            nextCubieIndex = (i + 1) % 4;
+            cubieTileCheckIndex = (cube.cornerPieces[cubieIndex].GetTileIndex(Colors.yellow) + 2) % 3;
+            nextCubieTileCheckIndex = (cube.cornerPieces[nextCubieIndex].GetTileIndex(Colors.yellow) + 1) % 3;
+
+            if (cube.cornerPieces[cubieIndex].tiles[cubieTileCheckIndex].color == cube.cornerPieces[nextCubieIndex].tiles[nextCubieTileCheckIndex].color)
+            {
+                matches++;
+                lastMatch = cube.cornerPieces[cubieIndex].tiles[cubieTileCheckIndex];
+            }
+        }
+
+        if (matches == 0)
+        {
+            //perform algorithm
+            yield return StartCoroutine(Algorithm("F R U' R' U' R U R' F' R U R' U' R' F R F'"));
+        }
+        else if (matches == 1)
+        {
+            //rotate up side into position
+            if (lastMatch.sideOfCube == SidesOfCube.back)
+                yield return StartCoroutine(Move(SidesOfCube.up, true));
+            else if (lastMatch.sideOfCube == SidesOfCube.right)
+            {
+                yield return StartCoroutine(Move(SidesOfCube.up, false));
+                yield return StartCoroutine(Move(SidesOfCube.up, false));
+            }
+            else if (lastMatch.sideOfCube == SidesOfCube.front)
+                yield return StartCoroutine(Move(SidesOfCube.up, false));
+
+            //perform algorithm
+            yield return StartCoroutine(Algorithm("R U R' U' R' F R R U' R' U' R U R' F'"));
+        }
+
+        //EDGES
+        //check if an edge is already permutated
+        int solvedTiles = 0;
+        Tile solvedTile = null;
+        if (cube.edgePieces[0].GetTile(SidesOfCube.front).color == cube.cornerPieces[0].GetTile(SidesOfCube.front).color)
+        {
+            solvedTiles++;
+            solvedTile = cube.edgePieces[0].GetTile(SidesOfCube.front);
+        }
+        if (cube.edgePieces[1].GetTile(SidesOfCube.left).color == cube.cornerPieces[1].GetTile(SidesOfCube.left).color)
+        {
+            solvedTiles++;
+            solvedTile = cube.edgePieces[1].GetTile(SidesOfCube.left);
+        }
+        if (cube.edgePieces[2].GetTile(SidesOfCube.back).color == cube.cornerPieces[2].GetTile(SidesOfCube.back).color)
+        {
+            solvedTiles++;
+            solvedTile = cube.edgePieces[2].GetTile(SidesOfCube.back);
+        }
+        if (cube.edgePieces[3].GetTile(SidesOfCube.right).color == cube.cornerPieces[3].GetTile(SidesOfCube.right).color)
+        {
+            solvedTiles++;
+            solvedTile = cube.edgePieces[3].GetTile(SidesOfCube.right);
+        }
+
+        if (solvedTiles < 4)
+        {
+            if (solvedTiles == 1)
+            {
+                //move top layer into position
+                if (solvedTile.sideOfCube == SidesOfCube.left)
+                    yield return StartCoroutine(Move(SidesOfCube.up, false));
+                else if (solvedTile.sideOfCube == SidesOfCube.front)
+                {
+                    yield return StartCoroutine(Move(SidesOfCube.up, false));
+                    yield return StartCoroutine(Move(SidesOfCube.up, false));
+                }
+                else if (solvedTile.sideOfCube == SidesOfCube.right)
+                    yield return StartCoroutine(Move(SidesOfCube.up, true));
+
+                //determine if clockwise or counterclockwise
+                if (cube.edgePieces[1].GetTile(SidesOfCube.left).color == cube.cornerPieces[3].GetTile(SidesOfCube.right).color)
+                {
+                    //clockwise
+                    yield return StartCoroutine(Algorithm("R R U R U R' U' R' U' R' U R'"));
+                }
+                else if (cube.edgePieces[3].GetTile(SidesOfCube.right).color == cube.cornerPieces[0].GetTile(SidesOfCube.left).color)
+                {
+                    //counterclockwise
+                    yield return StartCoroutine(Algorithm("R U' R U R U R U' R' U' R R"));
+                }
+            }
+            else
+            {
+                if (cube.edgePieces[0].GetTile(SidesOfCube.front).color == cube.cornerPieces[1].GetTile(SidesOfCube.back).color)
+                {
+                    //H perm
+                    yield return StartCoroutine(Algorithm("M M U' M M U' U' M M U' M M"));
+                }
+                else
+                {
+                    //Z perm
+                    //rotate top layer into position
+                    if (cube.edgePieces[0].GetTile(SidesOfCube.front).color == cube.cornerPieces[3].GetTile(SidesOfCube.right).color)
+                        yield return StartCoroutine(Move(SidesOfCube.up, false));
+
+                    //perform algorithm
+                    yield return StartCoroutine(Algorithm("M M U' M M U' M' U' U' M M U' U' M'"));
+                }
+            }
+        }
+
+        Colors frontColor = cube.centerPieces[1].tiles[0].color;
+        if (cube.edgePieces[1].GetTile(SidesOfCube.left).color == frontColor)
+            yield return StartCoroutine(Move(SidesOfCube.up, true));
+        else if (cube.edgePieces[2].GetTile(SidesOfCube.back).color == frontColor)
+        {
+            yield return StartCoroutine(Move(SidesOfCube.up, false));
+            yield return StartCoroutine(Move(SidesOfCube.up, false));
+        }
+        else if (cube.edgePieces[3].GetTile(SidesOfCube.right).color == frontColor)
+            yield return StartCoroutine(Move(SidesOfCube.up, false));
+
         currentStep = null;
         solving = false;
     }

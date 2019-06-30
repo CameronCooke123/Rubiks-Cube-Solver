@@ -10,7 +10,8 @@ public class CubeDisplay : MonoBehaviour
 
     public GameObject[] centers, edges, corners;
     Cubie[] centerPointers, edgePointers, cornerPointers;
-    public float rotationSpeed = 10;
+    [Range(100f, 2500f)]
+    public float rotationSpeed = 100f;
     public bool rotating;
 
     void Awake ()
