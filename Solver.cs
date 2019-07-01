@@ -1,6 +1,8 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class Solver : MonoBehaviour
 {
@@ -62,69 +64,237 @@ public class Solver : MonoBehaviour
         if (pauseAfterMove)
             Debug.Break();
     }
+    IEnumerator Move (string move, bool prime)
+    {
+        if (prime)
+            move += '\'';
+        yield return StartCoroutine(Move(move));
+    }
+    IEnumerator Move (string move)
+    {
+        bool prime = (move.Length > 1 && move[1] == '\'');
+        switch (move[0])
+        {
+            case 'U':
+                yield return StartCoroutine(Move(SidesOfCube.up, prime));
+                break;
+            case 'D':
+                yield return StartCoroutine(Move(SidesOfCube.down, prime));
+                break;
+            case 'R':
+                yield return StartCoroutine(Move(SidesOfCube.right, prime));
+                break;
+            case 'L':
+                yield return StartCoroutine(Move(SidesOfCube.left, prime));
+                break;
+            case 'F':
+                yield return StartCoroutine(Move(SidesOfCube.front, prime));
+                break;
+            case 'B':
+                yield return StartCoroutine(Move(SidesOfCube.back, prime));
+                break;
+            case 'M':
+                yield return StartCoroutine(Move(MidLayersOfCube.Middle, prime));
+                break;
+            case 'E':
+                yield return StartCoroutine(Move(MidLayersOfCube.Equatorial, prime));
+                break;
+            case 'S':
+                yield return StartCoroutine(Move(MidLayersOfCube.Standing, prime));
+                break;
+            case 'u':
+                StartCoroutine(Move(MidLayersOfCube.Equatorial, !prime));
+                yield return StartCoroutine(Move(SidesOfCube.up, prime));
+                break;
+            case 'd':
+                StartCoroutine(Move(MidLayersOfCube.Equatorial, prime));
+                yield return StartCoroutine(Move(SidesOfCube.down, prime));
+                break;
+            case 'r':
+                StartCoroutine(Move(MidLayersOfCube.Middle, prime));
+                yield return StartCoroutine(Move(SidesOfCube.right, prime));
+                break;
+            case 'l':
+                StartCoroutine(Move(MidLayersOfCube.Middle, !prime));
+                yield return StartCoroutine(Move(SidesOfCube.left, prime));
+                break;
+            case 'f':
+                StartCoroutine(Move(MidLayersOfCube.Standing, prime));
+                yield return StartCoroutine(Move(SidesOfCube.front, prime));
+                break;
+            case 'b':
+                StartCoroutine(Move(MidLayersOfCube.Standing, !prime));
+                yield return StartCoroutine(Move(SidesOfCube.back, prime));
+                break;
+            case 'x':
+                StartCoroutine(Move(SidesOfCube.right, prime));
+                StartCoroutine(Move(MidLayersOfCube.Middle, prime));
+                yield return StartCoroutine(Move(SidesOfCube.left, !prime));
+                break;
+            case 'y':
+                StartCoroutine(Move(SidesOfCube.up, prime));
+                StartCoroutine(Move(MidLayersOfCube.Equatorial, !prime));
+                yield return StartCoroutine(Move(SidesOfCube.down, !prime));
+                break;
+            case 'z':
+                StartCoroutine(Move(SidesOfCube.front, prime));
+                StartCoroutine(Move(MidLayersOfCube.Standing, prime));
+                yield return StartCoroutine(Move(SidesOfCube.back, !prime));
+                break;
+        }
+    }
     IEnumerator Algorithm (string alg)
     {
         string[] moves = alg.Split(new char[] { ' ' });
         for (int i = 0; i < moves.Length; i++)
         {
-            switch (moves[i])
+            yield return StartCoroutine(Move(moves[i]));
+        }
+    }
+
+    IEnumerator Align (SidesOfCube current, SidesOfCube target, string move, Func<SidesOfCube, SidesOfCube, int> func)
+    {
+        //if the value is negative, that means the moves should be prime
+        int numMoves = func(current, target);
+        if (Mathf.Abs(numMoves) == 1 && (move.ToUpper() == "L" || move.ToUpper() == "D" || move.ToUpper() == "B"))
+            numMoves *= -1;//since L D and B rotate in the opposite direction as x y and z, the moves need to be reversed
+
+        if (numMoves < 0)
+            yield return StartCoroutine(Move(move, true));
+        else
+        {
+            while (numMoves > 0)
             {
-                case "U":
-                    yield return StartCoroutine(Move(SidesOfCube.up, false));
-                    break;
-                case "U'":
-                    yield return StartCoroutine(Move(SidesOfCube.up, true));
-                    break;
-                case "D":
-                    yield return StartCoroutine(Move(SidesOfCube.down, false));
-                    break;
-                case "D'":
-                    yield return StartCoroutine(Move(SidesOfCube.down, true));
-                    break;
-                case "R":
-                    yield return StartCoroutine(Move(SidesOfCube.right, false));
-                    break;
-                case "R'":
-                    yield return StartCoroutine(Move(SidesOfCube.right, true));
-                    break;
-                case "L":
-                    yield return StartCoroutine(Move(SidesOfCube.left, false));
-                    break;
-                case "L'":
-                    yield return StartCoroutine(Move(SidesOfCube.left, true));
-                    break;
-                case "F":
-                    yield return StartCoroutine(Move(SidesOfCube.front, false));
-                    break;
-                case "F'":
-                    yield return StartCoroutine(Move(SidesOfCube.front, true));
-                    break;
-                case "B":
-                    yield return StartCoroutine(Move(SidesOfCube.back, false));
-                    break;
-                case "B'":
-                    yield return StartCoroutine(Move(SidesOfCube.back, true));
-                    break;
-                case "M":
-                    yield return StartCoroutine(Move(MidLayersOfCube.Middle, false));
-                    break;
-                case "M'":
-                    yield return StartCoroutine(Move(MidLayersOfCube.Middle, true));
-                    break;
-                case "E":
-                    yield return StartCoroutine(Move(MidLayersOfCube.Equatorial, false));
-                    break;
-                case "E'":
-                    yield return StartCoroutine(Move(MidLayersOfCube.Equatorial, true));
-                    break;
-                case "S":
-                    yield return StartCoroutine(Move(MidLayersOfCube.Standing, false));
-                    break;
-                case "S'":
-                    yield return StartCoroutine(Move(MidLayersOfCube.Standing, true));
-                    break;
+                yield return StartCoroutine(Move(move, false));
+                numMoves--;
             }
         }
+    }
+    IEnumerator Align_XAxis (SidesOfCube current, SidesOfCube target, string move)
+    {
+        yield return StartCoroutine(Align(current, target, move, getFastestAlignMoves_XAxis));
+    }
+    int getFastestAlignMoves_XAxis (SidesOfCube current, SidesOfCube target)
+    {
+        if (current == target)
+            return 0;
+
+        int cur, tar;
+        if (current == SidesOfCube.front)
+            cur = 0;
+        else if (current == SidesOfCube.up)
+            cur = 1;
+        else if (current == SidesOfCube.back)
+            cur = 2;
+        else
+            cur = 3;
+        if (target == SidesOfCube.front)
+            tar = 0;
+        else if (target == SidesOfCube.up)
+            tar = 1;
+        else if (target == SidesOfCube.back)
+            tar = 2;
+        else
+            tar = 3;
+
+
+        if (cur % 2 == tar % 2)
+            return 2;
+
+        if (tar == 0 && cur == 3)
+            return 1;
+        if (tar == 3 && cur == 0)
+            return -1;
+        if (tar < cur)
+            return -1;
+        return 1;
+    }
+    IEnumerator Align_YAxis (SidesOfCube current, SidesOfCube target, string move)
+    {
+        yield return StartCoroutine(Align(current, target, move, getFastestAlignMoves_YAxis));
+    }
+    int getFastestAlignMoves_YAxis (SidesOfCube current, SidesOfCube target)
+    {
+        if (current == target)
+            return 0;
+
+        int cur, tar;
+        if (current == SidesOfCube.front)
+            cur = 0;
+        else if (current == SidesOfCube.left)
+            cur = 1;
+        else if (current == SidesOfCube.back)
+            cur = 2;
+        else
+            cur = 3;
+        if (target == SidesOfCube.front)
+            tar = 0;
+        else if (target == SidesOfCube.left)
+            tar = 1;
+        else if (target == SidesOfCube.back)
+            tar = 2;
+        else
+            tar = 3;
+
+
+        if (cur % 2 == tar % 2)
+            return 2;
+
+        if (tar == 0 && cur == 3)
+            return 1;
+        if (tar == 3 && cur == 0)
+            return -1;
+        if (tar < cur)
+            return -1;
+        return 1;
+    }
+    IEnumerator Align_ZAxis (SidesOfCube current, SidesOfCube target, string move)
+    {
+        yield return StartCoroutine(Align(current, target, move, getFastestAlignMoves_ZAxis));
+    }
+    int getFastestAlignMoves_ZAxis (SidesOfCube current, SidesOfCube target)
+    {
+        if (current == target)
+            return 0;
+
+        int cur, tar;
+        if (current == SidesOfCube.up)
+            cur = 0;
+        else if (current == SidesOfCube.right)
+            cur = 1;
+        else if (current == SidesOfCube.down)
+            cur = 2;
+        else
+            cur = 3;
+        if (target == SidesOfCube.up)
+            tar = 0;
+        else if (target == SidesOfCube.right)
+            tar = 1;
+        else if (target == SidesOfCube.down)
+            tar = 2;
+        else
+            tar = 3;
+
+        if (cur % 2 == tar % 2)
+            return 2;
+
+        if (tar == 0 && cur == 3)
+            return 1;
+        if (tar == 3 && cur == 0)
+            return -1;
+        if (tar < cur)
+            return -1;
+        return 1;
+    }
+    IEnumerator Align_AnyAxis (SidesOfCube current, SidesOfCube target, string move)
+    {
+        char upperCaseMove = move.ToUpper()[0];
+        if (upperCaseMove == 'R' || upperCaseMove == 'L')
+            yield return StartCoroutine(Align_XAxis(current, target, move));
+        else if (upperCaseMove == 'U' || upperCaseMove == 'D')
+            yield return StartCoroutine(Align_YAxis(current, target, move));
+        else if (upperCaseMove == 'F' || upperCaseMove == 'B')
+            yield return StartCoroutine(Align_ZAxis(current, target, move));
     }
 
     //todo: implement Cubie.GetTile() and Cubie.GetTileIndex() everywhere it belongs.
@@ -176,83 +346,104 @@ public class Solver : MonoBehaviour
         //line up the other side of each edge piece with its color's center piece
         for (int i = 0; i < 4; i++)
         {
-            //Debug.Log(otherTiles[i].color);
             //check if the cubie is already in its proper place...
-            bool cubieInPlace = whiteTiles[i].sideOfCube == SidesOfCube.down && otherTiles[i].sideOfCube == cube.GetCenterFromColor(otherTiles[i].color).tiles[0].sideOfCube;
+            SidesOfCube centerSide = cube.GetCenterFromColor(otherTiles[i].color).tiles[0].sideOfCube;
+            bool cubieInPlace = (otherTiles[i].sideOfCube == centerSide);
             if (cubieInPlace)
+            {
+                yield return StartCoroutine(Align_AnyAxis(whiteTiles[i].sideOfCube, SidesOfCube.down, ConvertMove(otherTiles[i].sideOfCube)));
                 continue;
+            }
 
             //move the edge piece to the top layer and orient it properly
-            if (otherTiles[i].sideOfCube != SidesOfCube.up && otherTiles[i].sideOfCube != SidesOfCube.down)
+            if (otherTiles[i].sideOfCube == SidesOfCube.up)
             {
-                int moveCount = 0;
-                SidesOfCube sideToMove = otherTiles[i].sideOfCube;
-                //move the cubie up to the top layer
-                while (whiteTiles[i].sideOfCube != SidesOfCube.up)
-                {
-                    moveCount++;
-                    yield return StartCoroutine(Move(sideToMove, false));
-                }
-                //move the edge out of the way, then undo the moves on sideToMove
-                yield return StartCoroutine(Move(SidesOfCube.up, false));
-                while (moveCount > 0)
-                {
-                    yield return StartCoroutine(Move(sideToMove, true));
-                    moveCount--;
-                }
+                //put the cubie and its corresponding non-white side in front
+                yield return StartCoroutine(Align_AnyAxis(whiteTiles[i].sideOfCube, SidesOfCube.front, "U"));
+                yield return StartCoroutine(Align_AnyAxis(centerSide, SidesOfCube.front, "d"));
+
+                //flip the cubie
+                yield return StartCoroutine(Algorithm("F D R' D'"));
+            }
+            else if (otherTiles[i].sideOfCube == SidesOfCube.down)
+            {
+                //put the corresponding center in front
+                yield return StartCoroutine(Align_AnyAxis(centerSide, SidesOfCube.front, "u"));
+
+                SidesOfCube originalFirstSide = cube.GetCenterFromColor(otherTiles[0].color).tiles[0].sideOfCube;
+                //align down side for current edge
+                yield return StartCoroutine(Align_AnyAxis(whiteTiles[i].sideOfCube, SidesOfCube.right, "D"));
+                //todo: make this also align with the left side, if its faster
+                //move current edge out of down side
+                yield return StartCoroutine(Move(SidesOfCube.right, false));
+                if (i > 0)//realign the down side as it was before if there were any other edges already solved
+                    yield return StartCoroutine(Align_AnyAxis(otherTiles[0].sideOfCube, originalFirstSide, "D"));
+
+                //move current edge into place
+                yield return StartCoroutine(Move(SidesOfCube.front, false));
+
+                //flip the cubie
+                //yield return StartCoroutine(Algorithm("F' D R' D'"));
             }
             else
             {
-                int moveCount = 0;
-                SidesOfCube sideToMove = whiteTiles[i].sideOfCube;
-                //move the cubie up to the top layer
-                while (otherTiles[i].sideOfCube != SidesOfCube.up)
-                {
-                    moveCount++;
-                    yield return StartCoroutine(Move(sideToMove, false));
-                }
-                //move the edge out of the way, then undo the moves on sideToMove
-                if (moveCount > 0)
-                    yield return StartCoroutine(Move(SidesOfCube.up, false));
-                while (moveCount > 0)
-                {
-                    yield return StartCoroutine(Move(sideToMove, true));
-                    moveCount--;
-                }
-                //set up cubie
-                while (whiteTiles[i].sideOfCube != SidesOfCube.front)
-                    yield return StartCoroutine(Move(SidesOfCube.up, false));
-                //flip the cubie
-                yield return StartCoroutine(Algorithm("F R U' R' F'"));
+                SidesOfCube originalWhiteTileSide = whiteTiles[i].sideOfCube;
+                string move = ConvertMove(otherTiles[i].sideOfCube);
+
+                //rotate otherTiles[i].side until white is up
+                yield return StartCoroutine(Align_AnyAxis(originalWhiteTileSide, SidesOfCube.up, move));
+
+                //move top layer out of the way (align with its proper center)
+                yield return StartCoroutine(Align_AnyAxis(otherTiles[i].sideOfCube, centerSide, "U"));
+
+                //undo front side movement, in case another white edge piece was already aligned there
+                yield return StartCoroutine(Align_AnyAxis(SidesOfCube.up, originalWhiteTileSide, move));
+
+                //move edge into place
+                yield return StartCoroutine(Align_AnyAxis(whiteTiles[i].sideOfCube, SidesOfCube.down, ConvertMove(centerSide)));
             }
-
-            //find the center cubie that is the same color as otherTile
-            SidesOfCube otherColorSide = cube.GetCenterFromColor(otherTiles[i].color).tiles[0].sideOfCube;
-
-            //move the properly oriented cubie to its side on the cube
-            while (otherTiles[i].sideOfCube != otherColorSide)
+            /*else
             {
-                //print("otherTile color: " + otherTiles[i].color + ", whiteTile side: " + whiteTiles[i].sideOfCube + ", otherTile side: " + otherTiles[i].sideOfCube + ", otherColorSide: " + otherColorSide);
-                yield return StartCoroutine(Move(SidesOfCube.up, false));
-            }
+                //int moveCount = 0;
+                //SidesOfCube sideToMove = whiteTiles[i].sideOfCube;
+                ////move the cubie up to the top layer
+                //while (otherTiles[i].sideOfCube != SidesOfCube.up)
+                //{
+                //    moveCount++;
+                //    yield return StartCoroutine(Move(sideToMove, false));
+                //}
+                ////move the edge out of the way, then undo the moves on sideToMove
+                //if (moveCount > 0)
+                //    yield return StartCoroutine(Move(SidesOfCube.up, false));
+                //while (moveCount > 0)
+                //{
+                //    yield return StartCoroutine(Move(sideToMove, true));
+                //    moveCount--;
+                //}
+                //set up cubie
+                yield return StartCoroutine(Align_YAxis(whiteTiles[i].sideOfCube, SidesOfCube.front, "U"));
+                //while (whiteTiles[i].sideOfCube != SidesOfCube.front)
+                //    yield return StartCoroutine(Move(SidesOfCube.up, false));
+                //flip the cubie
+                yield return StartCoroutine(Algorithm("F R U U R' F' U'"));
+            }*/
 
-            //move the edge piece down to its proper spot
-            yield return StartCoroutine(Move(otherColorSide, false));
-            yield return StartCoroutine(Move(otherColorSide, false));
+            ////find the center cubie that is the same color as otherTile
+            //SidesOfCube otherColorSide = cube.GetCenterFromColor(otherTiles[i].color).tiles[0].sideOfCube;
+
+            ////move the properly oriented cubie to its side on the cube
+            //while (otherTiles[i].sideOfCube != otherColorSide)
+            //{
+            //    yield return StartCoroutine(Move(SidesOfCube.up, false));
+            //}
+
+            ////move the edge piece down to its proper spot
+            //yield return StartCoroutine(Move(otherColorSide, false));
+            //yield return StartCoroutine(Move(otherColorSide, false));
         }
         yield return null;
         currentStep = StartCoroutine(FirstTwoLayers());
     }
-    /*  OLD NOTES
-         1. whichever tile is NOT the white one, rotate that side (!prime) until the white side is facing up. (this is very inefficient obviously, but it will work for now)
-            a. rotate the up side once, and then undo the rotations on the first side.
-                1. store the number of moves. then when undoing them, if the number is greater than 2, do the same rotation until the total is 4. 
-                                                                      else, do the opposite rotation until the total is 0.
-         2. rotate up side until the non-white side is the same color as the center piece on that side
-         3. rotate that side twice
-
-         1. special case for when the piece is on the up layer but upside down, do a flipping algorithm
-         */
     IEnumerator FirstTwoLayers ()
     {
         //CORNERS
@@ -276,10 +467,9 @@ public class Solver : MonoBehaviour
             }
 
             //check if the corner piece is already in place
-            bool inPlace = whiteTile.sideOfCube == SidesOfCube.down &&
-                           secondTile.sideOfCube == cube.GetCenterFromColor(secondTile.color).tiles[0].sideOfCube &&
-                           thirdTile.sideOfCube == cube.GetCenterFromColor(thirdTile.color).tiles[0].sideOfCube;
-            if (inPlace)
+            if (whiteTile.sideOfCube == SidesOfCube.down &&
+                secondTile.sideOfCube == cube.GetCenterFromColor(secondTile.color).tiles[0].sideOfCube &&
+                thirdTile.sideOfCube == cube.GetCenterFromColor(thirdTile.color).tiles[0].sideOfCube)
                 continue;
 
             //Check if the piece is in the bottom layer.
@@ -302,44 +492,52 @@ public class Solver : MonoBehaviour
 
             if (sidewaysTiles[0] != null && sidewaysTiles[1] != null)//will be true only if the cubie is in the bottom layer
             {
-                //rotate the down side so that the corner is in the proper place
-                int moveCount = 0;
-                while (sidewaysTiles[0].sideOfCube != SidesOfCube.front || sidewaysTiles[1].sideOfCube != SidesOfCube.right)
-                {
-                    yield return StartCoroutine(Move(SidesOfCube.down, false));
-                    moveCount++;
-                }
-
+                //rotate cube so that the corner is in the proper place
+                yield return StartCoroutine(Align_YAxis(sidewaysTiles[0].sideOfCube, SidesOfCube.front, "y"));
+                //todo: implement AlignYAxis() where appropriate. Ex above
                 //do algorithm
                 yield return StartCoroutine(Algorithm("R U R'"));
-
-                while (moveCount > 0)
-                {
-                    yield return StartCoroutine(Move(SidesOfCube.down, true));
-                    moveCount--;
-                }
             }
 
-            //rotate up side until the corner piece is in the proper spot
+            //rotate cube into position
             Tile secondSide = cube.GetCenterFromColor(secondTile.color).tiles[0];
             Tile thirdSide = cube.GetCenterFromColor(thirdTile.color).tiles[0];
-
-            while (true)
+            bool bottom2LayersInPlace = (secondSide.sideOfCube == SidesOfCube.front);
+            bool cornerInPlace = (cube.whiteSide.corners[i] == cube.cornerPieces[3]);
+            
+            while (!bottom2LayersInPlace || !cornerInPlace)
             {
-                if ((whiteTile.sideOfCube == secondSide.sideOfCube || secondTile.sideOfCube == secondSide.sideOfCube || thirdTile.sideOfCube == secondSide.sideOfCube) &&
-                    (whiteTile.sideOfCube == thirdSide.sideOfCube || secondTile.sideOfCube == thirdSide.sideOfCube || thirdTile.sideOfCube == thirdSide.sideOfCube))
+                if (!bottom2LayersInPlace && !cornerInPlace)
                 {
-                    break;
+
+                    if (secondSide.sideOfCube == SidesOfCube.left)
+                        yield return StartCoroutine(Move("y'"));
+                    else if (secondSide.sideOfCube == SidesOfCube.back)
+                        yield return StartCoroutine(Move("y"));
+                    if (secondSide.sideOfCube == SidesOfCube.right)
+                        yield return StartCoroutine(Move("y"));
+                }
+                else if (!bottom2LayersInPlace)
+                {
+                    if (secondSide.sideOfCube == SidesOfCube.left)
+                        yield return StartCoroutine(Move("d"));
+                    else if (secondSide.sideOfCube == SidesOfCube.back)
+                        yield return StartCoroutine(Move("d'"));
+                    if (secondSide.sideOfCube == SidesOfCube.right)
+                        yield return StartCoroutine(Move("d'"));
+                }
+                else if (!cornerInPlace)
+                {
+                    if (cube.whiteSide.corners[i] == cube.cornerPieces[0])
+                        yield return StartCoroutine(Move("U'"));
+                    else if (cube.whiteSide.corners[i] == cube.cornerPieces[1])
+                        yield return StartCoroutine(Move("U"));
+                    if (cube.whiteSide.corners[i] == cube.cornerPieces[2])
+                        yield return StartCoroutine(Move("U"));
                 }
 
-                yield return StartCoroutine(Move(SidesOfCube.up, false));
-            }
-            //rotate whole cube until it's in the correct orientation
-            while (secondSide.sideOfCube != SidesOfCube.front || thirdSide.sideOfCube != SidesOfCube.right)
-            {
-                yield return StartCoroutine(Move(SidesOfCube.up, true));
-                yield return StartCoroutine(Move(MidLayersOfCube.Equatorial, false));
-                yield return StartCoroutine(Move(SidesOfCube.down, false));
+                bottom2LayersInPlace = (secondSide.sideOfCube == SidesOfCube.front);
+                cornerInPlace = (cube.whiteSide.corners[i] == cube.cornerPieces[3]);
             }
 
             //perform algorithm until cube is in final spot
@@ -390,9 +588,7 @@ public class Solver : MonoBehaviour
                 //rotate whole cube into position
                 while (nonWYEdges[i] != cube.edgePieces[7])
                 {
-                    yield return StartCoroutine(Move(SidesOfCube.up, true));
-                    yield return StartCoroutine(Move(MidLayersOfCube.Equatorial, false));
-                    yield return StartCoroutine(Move(SidesOfCube.down, false));
+                    yield return StartCoroutine(Move("y'"));
                 }
 
                 //find random yellow piece from top layer and move it into position
@@ -416,9 +612,7 @@ public class Solver : MonoBehaviour
             //rotate whole cube into position
             while (nonWYEdges[i] != cube.edgePieces[0])
             {
-                yield return StartCoroutine(Move(SidesOfCube.up, true));
-                yield return StartCoroutine(Move(MidLayersOfCube.Equatorial, false));
-                yield return StartCoroutine(Move(SidesOfCube.down, false));
+                yield return StartCoroutine(Move("y'"));
             }
 
             //perform algorithm
@@ -448,7 +642,7 @@ public class Solver : MonoBehaviour
         //get top cross
         if (yelTilesUpIndexes.Count == 0)
         {
-            yield return StartCoroutine(Algorithm("F R U R' U' S R U R' U' F' S'"));
+            yield return StartCoroutine(Algorithm("F R U R' U' S R U R' U' f'"));
         }
         else if (yelTilesUpIndexes.Count == 2)
         {
@@ -472,7 +666,7 @@ public class Solver : MonoBehaviour
                     if (yelTilesUpIndexes[0] < 2)
                     {
                         yield return StartCoroutine(Move(SidesOfCube.up, true));
-                        yelTilesUpIndexes[0] = (yelTilesUpIndexes[0] + 3) % 4;//this is kind of an obnoxious looking formula. It just means:
+                        yelTilesUpIndexes[0] = (yelTilesUpIndexes[0] + 3) % 4;//this is kind of an obnoxious looking formula. It just means
                         yelTilesUpIndexes[1] = (yelTilesUpIndexes[1] + 3) % 4;//subtract 1. C# modulus is weird with negative numbers for some reason.
                     }
                     else
@@ -484,7 +678,7 @@ public class Solver : MonoBehaviour
                 }
 
                 //get top cross
-                yield return StartCoroutine(Algorithm("F S R U R' U' F' S'"));
+                yield return StartCoroutine(Algorithm("f R U R' U' f'"));
             }
         }
 
@@ -613,7 +807,7 @@ public class Solver : MonoBehaviour
                 }
 
                 //perform algorithm
-                yield return StartCoroutine(Algorithm("F' R M U R' U' R' M' F R"));
+                yield return StartCoroutine(Algorithm("F' r U R' U' r' F R"));
             }
             else if (notFacingUpYelTiles[0].sideOfCube == notFacingUpYelTiles[1].sideOfCube)
             {
@@ -648,7 +842,7 @@ public class Solver : MonoBehaviour
                 }
 
                 //perform algorithm
-                yield return StartCoroutine(Algorithm("R M U R' U' R' M' F R F'"));
+                yield return StartCoroutine(Algorithm("r U R' U' r' F R F'"));
             }
         }
 
@@ -830,4 +1024,55 @@ public class Solver : MonoBehaviour
         }
         scrambling = false;
     }
+
+    string ConvertMove (SidesOfCube side)
+    {
+        switch (side)
+        {
+            case SidesOfCube.right:
+                return "R";
+            case SidesOfCube.left:
+                return "L";
+            case SidesOfCube.up:
+                return "U";
+            case SidesOfCube.down:
+                return "D";
+            case SidesOfCube.front:
+                return "F";
+            default:
+                return "B";
+        }
+    }
 }
+
+//OLD CODE
+//if (centerSide == whiteTiles[i].sideOfCube)
+//{
+//    yield return StartCoroutine(Align_AnyAxis(centerSide, SidesOfCube.front, "y"));
+//}
+//else if (centerSide == SidesOfCube.front)
+//{
+//    yield return StartCoroutine(Align_AnyAxis(whiteTiles[i].sideOfCube, SidesOfCube.front, "U"));
+//}
+//else if (whiteTiles[i].sideOfCube == SidesOfCube.front)
+//{
+//    yield return StartCoroutine(Align_AnyAxis(centerSide, SidesOfCube.front, "d"));
+//}
+//else
+//{
+//    if (centerSide == SidesOfCube.back)
+//    {
+//        yield return StartCoroutine(Align_AnyAxis(whiteTiles[i].sideOfCube, SidesOfCube.front, "y"));
+//        yield return StartCoroutine(Align_AnyAxis(centerSide, SidesOfCube.front, "d"));
+//    }
+//    else if (whiteTiles[i].sideOfCube == SidesOfCube.back)
+//    {
+//        yield return StartCoroutine(Align_AnyAxis(centerSide, SidesOfCube.front, "y"));
+//        yield return StartCoroutine(Align_AnyAxis(whiteTiles[i].sideOfCube, SidesOfCube.front, "U"));
+//    }
+//    else
+//    {
+//        yield return StartCoroutine(Align_AnyAxis(centerSide, SidesOfCube.front, "d"));
+//        yield return StartCoroutine(Align_AnyAxis(whiteTiles[i].sideOfCube, SidesOfCube.front, "U"));
+//    }
+//}
