@@ -26,6 +26,7 @@ public class CubeDisplay : MonoBehaviour
         edgePointers = new Cubie[12];
         cornerPointers = new Cubie[8];
 
+        cube.newCubeGenerated += StopMoving;
         cube.newCubeGenerated += SetWorldCubes;
         cube.rotationMade += RotateSide;
         cube.rotationMade_Layer += RotateLayer;
@@ -101,6 +102,11 @@ public class CubeDisplay : MonoBehaviour
         }
     }
 
+    void StopMoving ()
+    {
+        StopAllCoroutines();
+        rotating = false;
+    }
     void SetWorldCubes ()
     {
         for (int i = 0; i < 6; i++)

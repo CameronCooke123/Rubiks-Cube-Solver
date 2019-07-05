@@ -41,9 +41,7 @@ public class Cube : MonoBehaviour
 
     public void Start ()                                                                                           
     {                                                                                                             
-        //print("Generating New Cube...");                                                                        
         GenerateNewCube();                                                                                        
-        //print("New Cube Generated.");                                                                           
     }                                                                                                             
                                                                                                                   
     void GenerateNewCube ()                                                                                       
@@ -453,6 +451,28 @@ public class Cube : MonoBehaviour
                 return centerPieces[i];
         }
         return centerPieces[0];
+    }
+    public int GetCubieIndex (Cubie cubie)
+    {
+        for (int i = 0; i < 11; i++)
+        {
+            if (i < 6)
+            {
+                //check centers
+                if (cubie == centerPieces[i])
+                    return i;
+            }
+            if (i < 8)
+            {
+                //check corners
+                if (cubie == cornerPieces[i])
+                    return i;
+            }
+            //check edges
+            if (cubie == edgePieces[i])
+                return i;
+        }
+        return 11;
     }
 
     public void RotateSide (SidesOfCube side, bool prime)
